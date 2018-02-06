@@ -1,23 +1,29 @@
 import cv2
 import numpy
 from os.path import join
+g = open("track.txt","w+")
 
-
-def show_image_with_data(frame, blinks, irises, err=None):
+def show_image_with_data(frame, blinks, landblinks, irises, window, err=None):
     """
     Helper function to draw points on eyes and display frame
     :param frame: image to draw on
     :param blinks: number of blinks
+    :param window: for window dimension FW: added window for obtaining the window dimension
     :param irises: array of points with coordinates of irises
     :param err: for displaying current error in Lucas-Kanade tracker
     :return:
     """
+    
     font = cv2.FONT_HERSHEY_SIMPLEX
+    width = window.get(cv2.CAP_PROP_FRAME_WIDTH) # float FW
+    height = window.get(cv2.CAP_PROP_FRAME_HEIGHT) # float FW
     if err:
         cv2.putText(frame, str(err), (20, 450), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
-    cv2.putText(frame, 'blinks: ' + str(blinks), (10, 30), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
+    cv2.putText(frame, 'blinks: ' + str(blinks), (int(0.9*width), int(0.97*height)), font, 0.7, (255, 255, 255), 1, cv2.LINE_AA)
     for w, h in irises:
         cv2.circle(frame, (w, h), 2, (0, 255, 0), 2)
+    cv2.rectangle(frame,(int(0.01*width),int(0.0125*height)),(int(0.21*width),int(0.18*height)),(255,255,255),1) #takeoff rectangle FW
+    cv2.rectangle(frame,(int(0.79*width),int(0.0125*height)),(int(0.99*width),int(0.18*height)),(255,255,255),1)   #landing rectangle FW
     cv2.imshow('Eyeris detector', frame)
 
 
@@ -30,7 +36,7 @@ class ImageSource:
 
     def get_current_frame(self, gray=False):
         ret, frame = self.capture.read()
-        frame = cv2.flip(frame, 1)
+        frame = cv2.flip(frame, 1)  # 60fps
         if not gray:
             return frame
         return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -45,9 +51,9 @@ class CascadeClassifier:
     """
     def __init__(self, glasses=True):
         if glasses:
-            self.eye_cascade = cv2.CascadeClassifier(join('haar', 'haarcascade_eye_tree_eyeglasses.xml'))
+            self.eye_cascade = cv2.CascadeClassifier(join('haarcascade_eye_tree_eyeglasses.xml'))
         else:
-            self.eye_cascade = cv2.CascadeClassifier(join('haar', 'haarcascade_eye.xml'))
+            self.eye_cascade = cv2.CascadeClassifier(join('haarcascade_eye.xml'))
 
     def get_irises_location(self, frame_gray):
         eyes = self.eye_cascade.detectMultiScale(frame_gray, 1.3, 5)  # if not empty - eyes detected
@@ -92,6 +98,7 @@ class LucasKanadeTracker:
         return irises, blinks, blink_in_previous, lost_track
 
 
+
 class EyerisDetector:
     """
     Main class which use image source, classifier and tracker to estimate iris postion
@@ -105,22 +112,66 @@ class EyerisDetector:
         self.irises = []
         self.blink_in_previous = False
         self.blinks = 0
-
+        #self.takeoffblinks = 0
+        self.landblinks = 0
+    
     def run(self):
+        counttf = []
+        countld = []
         k = cv2.waitKey(30) & 0xff
-        while k != 27:  # ESC
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        while k != 32:  # space
             frame = self.image_source.get_current_frame()
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             if len(self.irises) >= 2:  # irises detected, track eyes
                 track_result = self.tracker.track(old_gray, gray, self.irises, self.blinks, self.blink_in_previous)
                 self.irises, self.blinks, self.blink_in_previous, lost_track = track_result
+                width = self.image_source.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
+                height = self.image_source.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                takeoffwidth = [int(0.01*width),int(0.21*width)]
+                takeoffheight = [int(0.0125*height),int(0.18*height)]
+                landingwidth = [int(0.79*width),int(0.99*width)]
+                landingheight = takeoffheight
+                intakeoff = (takeoffwidth[1]>=int(self.irises[0][0])>=takeoffwidth[0] and takeoffheight[1]>=int(self.irises[0][1])>=takeoffheight[0]) or (takeoffwidth[1]>=int(self.irises[1][0])>=takeoffwidth[0] and takeoffheight[1]>=int(self.irises[1][1])>=takeoffheight[0])
+                inlanding = (landingwidth[1]>=int(self.irises[0][0])>=landingwidth[0] and landingheight[1]>=int(self.irises[0][1])>=landingheight[0]) or (landingwidth[1]>=int(self.irises[1][0])>=landingwidth[0] and landingheight[1]>=int(self.irises[1][1])>=landingheight[0])
+                
+                if not(intakeoff or inlanding):
+                    counttf[:] = []
+                    countld[:] = []
+                    g.write("waiting\r\n")
+                
+                if intakeoff:
+                    countld[:] = []
+                    cv2.rectangle(frame,(takeoffwidth[0],takeoffheight[0]),(takeoffwidth[1],takeoffheight[1]),(255,255,255),2)
+                    counttf.append(self.irises)
+                    waittime = 3 - int(len(counttf)/11)
+                    if waittime > 0:
+                        cv2.putText(frame, 'takeoff in: ' + str(waittime) + 'sec', (takeoffwidth[0],int(takeoffheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+                        g.write("waiting\r\n")
+                    if waittime <= 0:
+                        #if waittime > -1:
+                        g.write("takingoff\r\n")
+                        cv2.putText(frame, 'taking off,please wait', (takeoffwidth[0],int(takeoffheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+            
+                if inlanding:
+                    counttf[:] = []
+                    cv2.rectangle(frame,(landingwidth[0],landingheight[0]),(landingwidth[1],landingheight[1]),(255,255,255),2)
+                    countld.append(self.irises)
+                    waittime = 3 - int(len(countld)/11)
+                    if waittime > 0:
+                        g.write("waiting\r\n")
+                        cv2.putText(frame, 'landing in: ' + str(waittime) + 'sec', (landingwidth[0],int(landingheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+                    if waittime <= 0:
+                        g.write("landing\r\n")
+                        cv2.putText(frame, 'landing,please wait', (landingwidth[0],int(landingheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+                       
+                      
                 if lost_track:
                     self.irises = self.classifier.get_irises_location(gray)
             else:  # cannot track for some reason -> find irises
                 self.irises = self.classifier.get_irises_location(gray)
-
-            show_image_with_data(frame, self.blinks, self.irises)
+            show_image_with_data(frame, self.blinks, self.landblinks, self.irises, self.image_source.capture)
             k = cv2.waitKey(30) & 0xff
             old_gray = gray.copy()
 
@@ -132,3 +183,4 @@ eyeris_detector = EyerisDetector(image_source=ImageSource(), classifier=CascadeC
                                  tracker=LucasKanadeTracker())
 eyeris_detector.run()
 
+g.close()
