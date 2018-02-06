@@ -51,9 +51,9 @@ class CascadeClassifier:
     """
     def __init__(self, glasses=True):
         if glasses:
-            self.eye_cascade = cv2.CascadeClassifier(join('haar', 'haarcascade_eye_tree_eyeglasses.xml'))
+            self.eye_cascade = cv2.CascadeClassifier(join('haarcascade_eye_tree_eyeglasses.xml'))
         else:
-            self.eye_cascade = cv2.CascadeClassifier(join('haar', 'haarcascade_eye.xml'))
+            self.eye_cascade = cv2.CascadeClassifier(join('haarcascade_eye.xml'))
 
     def get_irises_location(self, frame_gray):
         eyes = self.eye_cascade.detectMultiScale(frame_gray, 1.3, 5)  # if not empty - eyes detected
