@@ -1,6 +1,7 @@
 import cv2
 import numpy
 from os.path import join
+data_analysis = file('np.csv', 'a')
 g = open("track.txt","w+")
 f = open("NOSE.txt","w+") ### TEST CODE ###
 def show_image_with_data(frame, blinks, landblinks, irises, window, err=None):
@@ -53,9 +54,9 @@ class CascadeClassifier:
     """
     def __init__(self, glasses=True):
         if glasses:
-            self.eye_cascade = cv2.CascadeClassifier(join('haarcascade_eye_tree_eyeglasses.xml'))
+            self.eye_cascade = cv2.CascadeClassifier(join('TrainedDataSet/haarcascade_eye_tree_eyeglasses.xml'))
         else:
-            self.eye_cascade = cv2.CascadeClassifier(join('haarcascade_eye.xml'))
+            self.eye_cascade = cv2.CascadeClassifier(join('TrainedDataSet/haarcascade_eye.xml'))
 
     def get_irises_location(self, frame_gray):
         eyes = self.eye_cascade.detectMultiScale(frame_gray, 1.3, 5)  # if not empty - eyes detected
@@ -138,7 +139,10 @@ class EyerisDetector:
                 landingheight = takeoffheight
                 intakeoff = (takeoffwidth[1]>=int(self.irises[0][0])>=takeoffwidth[0] and takeoffheight[1]>=int(self.irises[0][1])>=takeoffheight[0]) or (takeoffwidth[1]>=int(self.irises[1][0])>=takeoffwidth[0] and takeoffheight[1]>=int(self.irises[1][1])>=takeoffheight[0])
                 inlanding = (landingwidth[1]>=int(self.irises[0][0])>=landingwidth[0] and landingheight[1]>=int(self.irises[0][1])>=landingheight[0]) or (landingwidth[1]>=int(self.irises[1][0])>=landingwidth[0] and landingheight[1]>=int(self.irises[1][1])>=landingheight[0])
-                
+                tp = self.irises
+                tp = tp.reshape((1,4))          
+                numpy.savetxt(data_analysis, tp, fmt='%1.2f',delimiter=',')     
+                print tp
                 if not(intakeoff or inlanding):
                     counttf[:] = []
                     countld[:] = []
