@@ -3,7 +3,7 @@ import numpy
 from os.path import join
 data_analysis = file('np.csv', 'a')
 g = open("track.txt","w+")
-
+f = open("NOSE.txt","w+") ### TEST CODE ###
 def show_image_with_data(frame, blinks, landblinks, irises, window, err=None):
     """
     Helper function to draw points on eyes and display frame
@@ -36,7 +36,9 @@ class ImageSource:
         self.capture = cv2.VideoCapture(0)
 
     def get_current_frame(self, gray=False):
+        # ds_factor = 0.5 # screen scale factor if needed
         ret, frame = self.capture.read()
+        # frame = cv2.resize(frame, None, fx=ds_factor, fy=ds_factor, interpolation=cv2.INTER_AREA) #screen scale
         frame = cv2.flip(frame, 1)  # 60fps
         if not gray:
             return frame
@@ -128,6 +130,7 @@ class EyerisDetector:
             if len(self.irises) >= 2:  # irises detected, track eyes
                 track_result = self.tracker.track(old_gray, gray, self.irises, self.blinks, self.blink_in_previous)
                 self.irises, self.blinks, self.blink_in_previous, lost_track = track_result
+                # Take off and Landing
                 width = self.image_source.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
                 height = self.image_source.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
                 takeoffwidth = [int(0.01*width),int(0.21*width)]
@@ -170,7 +173,11 @@ class EyerisDetector:
                         g.write("landing\r\n")
                         cv2.putText(frame, 'landing,please wait', (landingwidth[0],int(landingheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
                        
-                      
+                # Nose detector
+                nose_cascade = cv2.CascadeClassifier('haarcascade_mcs_nose.xml')
+                nose_rects = nose_cascade.detectMultiScale(gray, 1.3, 5)
+                for (x,y,w,h) in nose_rects:
+                    f.write("{}\t{}\t{}\t{}\r\n".format(x,y,w,h)) ### TEST CODE ###
                 if lost_track:
                     self.irises = self.classifier.get_irises_location(gray)
             else:  # cannot track for some reason -> find irises
@@ -188,3 +195,4 @@ eyeris_detector = EyerisDetector(image_source=ImageSource(), classifier=CascadeC
 eyeris_detector.run()
 
 g.close()
+f.close() ### TEST CODE ###
