@@ -100,6 +100,69 @@ class LucasKanadeTracker:
             irises = numpy.array(irises)
         return irises, blinks, blink_in_previous, lost_track
 
+class character: ##Fan Added
+    def __init__(self):
+        self.state = 0; # 0 for waiting, 1 for takeoff, -1 for landing
+    def calibrate(self,input): # for modifying collected calibrated data
+        output = []
+        for i in range (0, len(input)):
+            output.append(input[i][0])
+        output.remove(output[0])
+        output.remove(output[-1])
+        minvalue = min(output)
+        maxvalue = max(output)
+        output.remove(minvalue)
+        output.remove(maxvalue)
+        average = sum(output)/float(len(output))
+        return average
+    def statetracker(self, font, imagesource, frame, irises, counttf, countld):
+        width = imagesource.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
+        height = imagesource.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        takeoffwidth = [int(0.01*width),int(0.21*width)]
+        takeoffheight = [int(0.0125*height),int(0.18*height)]
+        landingwidth = [int(0.79*width),int(0.99*width)]
+        landingheight = takeoffheight
+        intakeoff = (takeoffwidth[1]>=int(irises[0][0])>=takeoffwidth[0] and takeoffheight[1]>=int(irises[0][1])>=takeoffheight[0]) and (takeoffwidth[1]>=int(irises[1][0])>=takeoffwidth[0] and takeoffheight[1]>=int(irises[1][1])>=takeoffheight[0])
+        inlanding = (landingwidth[1]>=int(irises[0][0])>=landingwidth[0] and landingheight[1]>=int(irises[0][1])>=landingheight[0]) and (landingwidth[1]>=int(irises[1][0])>=landingwidth[0] and landingheight[1]>=int(irises[1][1])>=landingheight[0])
+        if not(intakeoff or inlanding):
+            counttf[:] = []
+            countld[:] = []
+            g.write("waiting\r\n")
+            self.state = 0
+
+        elif intakeoff:
+            countld[:] = []
+            counttf.append(irises)
+            waittime = 3 - int(len(counttf)/6)
+            if waittime > 0:
+                cv2.putText(frame, 'takeoff in: ' + str(waittime) + 'sec', (takeoffwidth[0],int(takeoffheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+                g.write("waiting\r\n")
+                self.state = 0
+            elif waittime <= 0:
+                g.write("takingoff\r\n")
+                cv2.putText(frame, 'taking off,please wait', (takeoffwidth[0],int(takeoffheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+                self.state = 1
+
+        elif inlanding:
+            counttf[:] = []
+            countld.append(irises)
+            waittime = 3 - int(len(countld)/6)
+            if waittime > 0:
+                g.write("waiting\r\n")
+                cv2.putText(frame, 'landing in: ' + str(waittime) + 'sec', (landingwidth[0],int(landingheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+                self.state = 0
+            elif waittime <= 0:
+                g.write("landing\r\n")
+                cv2.putText(frame, 'landing,please wait', (landingwidth[0],int(landingheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+                self.state = -1
+        else:
+            self.state = 4
+            g.write("unexpected error\r\n")
+                        
+
+        return self.state
+
+
 
 
 class EyerisDetector:
@@ -119,13 +182,52 @@ class EyerisDetector:
         self.landblinks = 0
     
     def run(self):
-        counttf = []
-        countld = []
+        
         k = cv2.waitKey(30) & 0xff
         font = cv2.FONT_HERSHEY_SIMPLEX
+        counttf = []
+        countld = []
+        #Calibration Array
+        calibrate_array_middle_0 = []
+        calibrate_array_middle_1 = []
+        calibrate_array_left_0 = []
+        calibrate_array_left_1 = []
+        calibrate_array_right_0 = []
+        calibrate_array_right_1 = []
+        cali_start = 1
+        # Store result for left and right eye. Index 0 for eye 0, index 1 for eye 1
+        cali_centre = []
+        cali_left = []
+        cali_right = []
         while k != 32:  # space
             frame = self.image_source.get_current_frame()
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            width = self.image_source.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
+            height = self.image_source.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            #Calibration Image
+            if cali_start == 1:
+                if len(calibrate_array_middle_0) < 30:
+                    cv2.circle(frame,(int(width/2),int(height/2)), 50, (153,255,255), -1) # Middle circle
+                    cv2.putText(frame, 'Please look at yellow circle', (int(width/2)-120,int(height/2)-50), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
+                    middle_on = 1
+                elif len(calibrate_array_middle_0) == 30 and len(calibrate_array_left_0)<30:
+                    cv2.circle(frame,(50,int(height/2)), 50, (153,255,0), -1) # left circle
+                    cv2.putText(frame, 'Please look at green circle', (0,int(height/2)-50), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
+                    left_on = 1
+                elif len(calibrate_array_middle_0) == 30 and len(calibrate_array_left_0) == 30 and len(calibrate_array_right_0) < 30:
+                    cv2.circle(frame,(int(width-50),int(height/2)), 50, (255,153,255), -1) # left circle
+                    cv2.putText(frame, 'Please look at pink circle', (int(width-350),int(height/2)-50), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
+                    right_on = 1
+                elif len(calibrate_array_middle_0) == 30 and len(calibrate_array_left_0) == 30 and len(calibrate_array_right_0) == 30:
+                    cali_centre.append(character().calibrate(calibrate_array_middle_0))
+                    cali_centre.append(character().calibrate(calibrate_array_middle_1))
+                    cali_left.append(character().calibrate(calibrate_array_left_0))
+                    cali_left.append(character().calibrate(calibrate_array_left_1))
+                    cali_right.append(character().calibrate(calibrate_array_right_0))
+                    cali_right.append(character().calibrate(calibrate_array_right_1))
+                    cali_start = 0
+
+
 
             if len(self.irises) >= 2:  # irises detected, track eyes
                 track_result = self.tracker.track(old_gray, gray, self.irises, self.blinks, self.blink_in_previous)
@@ -134,51 +236,24 @@ class EyerisDetector:
                 nose_cascade = cv2.CascadeClassifier('haarcascade_mcs_nose.xml')
                 nose_rects = nose_cascade.detectMultiScale(gray, 1.3, 5)
                 for (x,y,w,h) in nose_rects:
-                    f.write("{}\t{}\t{}\t{}\t{}\t{}\r\n".format(self.irises[0][0],self.irises[0][1],self.irises[1][0],self.irises[1][0],int(x+w/2),int(y+h/2))) ### TEST CODE ###
-#                    data_analysis.write("{}\t{}\t{}\t{}\r\n".format(irises[0][0],irises[0][1],irises[1][0],irises[1][0])) ### TEST CODE ###
-                # Take off and Landing
-                width = self.image_source.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
-                height = self.image_source.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
-                takeoffwidth = [int(0.01*width),int(0.21*width)]
-                takeoffheight = [int(0.0125*height),int(0.18*height)]
-                landingwidth = [int(0.79*width),int(0.99*width)]
-                landingheight = takeoffheight
-                intakeoff = ((takeoffwidth[1]>=int(self.irises[0][0])>=takeoffwidth[0] and takeoffheight[1]>=int(self.irises[0][1])>=takeoffheight[0]) and (takeoffwidth[1]>=int(self.irises[1][0])>=takeoffwidth[0] and takeoffheight[1]>=int(self.irises[1][1])>=takeoffheight[0]))
-                inlanding = ((landingwidth[1]>=int(self.irises[0][0])>=landingwidth[0] and landingheight[1]>=int(self.irises[0][1])>=landingheight[0]) and (landingwidth[1]>=int(self.irises[1][0])>=landingwidth[0] and landingheight[1]>=int(self.irises[1][1])>=landingheight[0]))
-                tp = self.irises
-                #tp = tp.reshape((1,4))
-                #numpy.savetxt(data_analysis, tp, fmt='%1.2f',delimiter=',')
-                print (tp)
-                if not(intakeoff or inlanding):
-                    counttf[:] = []
-                    countld[:] = []
-                    g.write("waiting\r\n")
+                    f.write("{}\t{}\t{}\t{}\t{}\t{}t\r\n".format(self.irises[0][0],self.irises[0][1],self.irises[1][0],self.irises[1][0],int(x+w/2),int(y+h/2))) ### TEST CODE ###
                 
-                if intakeoff:
-                    countld[:] = []
-                    cv2.rectangle(frame,(takeoffwidth[0],takeoffheight[0]),(takeoffwidth[1],takeoffheight[1]),(255,255,255),2)
-                    counttf.append(self.irises)
-                    waittime = 3 - int(len(counttf)/11)
-                    if waittime > 0:
-                        cv2.putText(frame, 'takeoff in: ' + str(waittime) + 'sec', (takeoffwidth[0],int(takeoffheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
-                        g.write("waiting\r\n")
-                    if waittime <= 0:
-                        #if waittime > -1:
-                        g.write("takingoff\r\n")
-                        cv2.putText(frame, 'taking off,please wait', (takeoffwidth[0],int(takeoffheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
-            
-                if inlanding:
-                    counttf[:] = []
-                    cv2.rectangle(frame,(landingwidth[0],landingheight[0]),(landingwidth[1],landingheight[1]),(255,255,255),2)
-                    countld.append(self.irises)
-                    waittime = 3 - int(len(countld)/11)
-                    if waittime > 0:
-                        g.write("waiting\r\n")
-                        cv2.putText(frame, 'landing in: ' + str(waittime) + 'sec', (landingwidth[0],int(landingheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
-                    if waittime <= 0:
-                        g.write("landing\r\n")
-                        cv2.putText(frame, 'landing,please wait', (landingwidth[0],int(landingheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+                if middle_on == 1:
+                    calibrate_array_middle_0.append([self.irises[0][0],self.irises[0][1]]) # left eye
+                    calibrate_array_middle_1.append([self.irises[1][0],self.irises[1][1]]) # right eye
+                    middle_on = 0
+                elif left_on == 1:
+                    calibrate_array_left_0.append([self.irises[0][0],self.irises[0][1]])# left eye
+                    calibrate_array_left_1.append([self.irises[1][0],self.irises[1][1]])# right eye
+                    left_on = 0
+                elif right_on == 1:
+                    calibrate_array_right_0.append([self.irises[0][0],self.irises[0][1]])# left eye
+                    calibrate_array_right_1.append([self.irises[1][0],self.irises[1][1]])# right eye
+                    right_on = 0
 
+                # Take off and Landing
+                status = character().statetracker(font, self.image_source, frame, self.irises, counttf, countld) # for status,0 is waiting, -1 is landing, 1 is takingoff, 4 is unexpected error
+                
                       
                 if lost_track:
                     self.irises = self.classifier.get_irises_location(gray)
