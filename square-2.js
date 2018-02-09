@@ -35,7 +35,7 @@ process.on('SIGINT', function() {
 // Connect and configure the drone
 mission.client().config('general:navdata_demo', true);
 mission.client().config('general:navdata_options', navdata_options);
-mission.client().config('video:video_channel', 1);
+mission.client().config('video:video_channel', 0);
 mission.client().config('detect:detect_type', 12);
 
 // Log mission for debugging purposes
@@ -43,18 +43,30 @@ mission.log("mission-" + df(new Date(), "yyyy-mm-dd_hh-MM-ss") + ".txt");
 
 // Plan mission
 mission.takeoff()
-       .zero()
-       .hover(500)
-       .altitude(1.5)
- //      .forward(2)
- //      .cw(90)
- //      .forward(2)
- //      .cw(90)
- //      .forward(2)
- //      .cw(90)
- //      .forward(2)
- //      .go({x:0, y:0})
-       .hover(500)
+     //  .zero()
+       .hover(2000)
+      // .altitude(1.5)
+       .left(0.5)
+       .hover(1000)
+       .left(0.5)
+       .hover(1000)
+       .right(0.5)
+       .hover(1000)
+       .right(0.5)
+       //.forward(1)
+       //.forward(1)
+      // .hover(500)
+       //.cw(70)
+      // .forward(1)
+      // .cw(90)
+      // .forward(1)
+       //.forward(1)
+       //.hover(1000)
+       //.ccw(70)
+       //.go({x:0.5, y:0})
+       //.go({x:0, y:0})
+       //.hover(500)
+       .hover(1000)
        .land();
 
 // Execute mission
