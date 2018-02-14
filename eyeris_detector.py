@@ -104,13 +104,9 @@ class character: ##Fan Added
     def __init__(self):
         self.state = 0; # 0 for waiting, 1 for takeoff, -1 for landing
     def calibrate(self,input): # for modifying collected calibrated data
-<<<<<<< HEAD
-        output = input
-=======
         output = []
         for i in range (0, len(input)):
             output.append(input[i][0])
->>>>>>> Yafan
         output.remove(output[0])
         output.remove(output[-1])
         minvalue = min(output)
@@ -118,11 +114,7 @@ class character: ##Fan Added
         output.remove(minvalue)
         output.remove(maxvalue)
         average = sum(output)/float(len(output))
-<<<<<<< HEAD
-        return output, average
-=======
         return average
->>>>>>> Yafan
     def statetracker(self, font, imagesource, frame, irises, counttf, countld):
         width = imagesource.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
         height = imagesource.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -140,10 +132,6 @@ class character: ##Fan Added
 
         elif intakeoff:
             countld[:] = []
-<<<<<<< HEAD
-            cv2.rectangle(frame,(takeoffwidth[0],takeoffheight[0]),(takeoffwidth[1],takeoffheight[1]),(255,255,255),2)
-=======
->>>>>>> Yafan
             counttf.append(irises)
             waittime = 3 - int(len(counttf)/6)
             if waittime > 0:
@@ -157,10 +145,6 @@ class character: ##Fan Added
 
         elif inlanding:
             counttf[:] = []
-<<<<<<< HEAD
-            cv2.rectangle(frame,(landingwidth[0],landingheight[0]),(landingwidth[1],landingheight[1]),(255,255,255),2)
-=======
->>>>>>> Yafan
             countld.append(irises)
             waittime = 3 - int(len(countld)/6)
             if waittime > 0:
@@ -179,11 +163,6 @@ class character: ##Fan Added
         return self.state
 
 
-<<<<<<< HEAD
-
-
-=======
->>>>>>> Yafan
 
 
 class EyerisDetector:
@@ -208,8 +187,6 @@ class EyerisDetector:
         font = cv2.FONT_HERSHEY_SIMPLEX
         counttf = []
         countld = []
-<<<<<<< HEAD
-=======
         #Calibration Array
         calibrate_array_middle_0 = []
         calibrate_array_middle_1 = []
@@ -222,7 +199,6 @@ class EyerisDetector:
         cali_centre = []
         cali_left = []
         cali_right = []
->>>>>>> Yafan
         while k != 32:  # space
             frame = self.image_source.get_current_frame()
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -261,18 +237,6 @@ class EyerisDetector:
                 nose_rects = nose_cascade.detectMultiScale(gray, 1.3, 5)
                 for (x,y,w,h) in nose_rects:
                     f.write("{}\t{}\t{}\t{}\t{}\t{}t\r\n".format(self.irises[0][0],self.irises[0][1],self.irises[1][0],self.irises[1][0],int(x+w/2),int(y+h/2))) ### TEST CODE ###
-<<<<<<< HEAD
-                #data_analysis.write("{}\t{}\t{}\t{}\r\n".format(irises[0][0],irises[0][1],irises[1][0],irises[1][0])) ### TEST CODE ###
-                # Take off and Landing
-                status = character().statetracker(font, self.image_source, frame, self.irises, counttf, countld) # for status,0 is waiting, -1 is landing, 1 is takingoff, 4 is unexpected error
-                
-                tp = self.irises
-                
-                #tp = tp.reshape((1,4))
-                #numpy.savetxt(data_analysis, tp, fmt='%1.2f',delimiter=',')
-                print (tp)
-                
-=======
                 
                 if middle_on == 1:
                     calibrate_array_middle_0.append([self.irises[0][0],self.irises[0][1]]) # left eye
@@ -290,7 +254,6 @@ class EyerisDetector:
                 # Take off and Landing
                 status = character().statetracker(font, self.image_source, frame, self.irises, counttf, countld) # for status,0 is waiting, -1 is landing, 1 is takingoff, 4 is unexpected error
                 
->>>>>>> Yafan
                       
                 if lost_track:
                     self.irises = self.classifier.get_irises_location(gray)
