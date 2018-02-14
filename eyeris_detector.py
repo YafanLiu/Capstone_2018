@@ -104,6 +104,7 @@ class character: ##Fan Added
     def __init__(self):
         self.state = 0; # 0 for waiting, 1 for takeoff, -1 for landing
     def calibrate(self,input): # for modifying collected calibrated data
+<<<<<<< Updated upstream
 <<<<<<< HEAD
         output = []
         for i in range (0, len(input)):
@@ -111,6 +112,12 @@ class character: ##Fan Added
 =======
         output = input
 >>>>>>> master
+=======
+        output = []
+        for i in range (0,len(input)):
+            output.append(input[i][0]) 
+            i += 1
+>>>>>>> Stashed changes
         output.remove(output[0])
         output.remove(output[-1])
         minvalue = min(output)
@@ -118,11 +125,15 @@ class character: ##Fan Added
         output.remove(minvalue)
         output.remove(maxvalue)
         average = sum(output)/float(len(output))
+<<<<<<< Updated upstream
 <<<<<<< HEAD
         return average
 =======
         return output, average
 >>>>>>> master
+=======
+        return average
+>>>>>>> Stashed changes
     def statetracker(self, font, imagesource, frame, irises, counttf, countld):
         width = imagesource.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
         height = imagesource.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -140,10 +151,13 @@ class character: ##Fan Added
 
         elif intakeoff:
             countld[:] = []
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 =======
             cv2.rectangle(frame,(takeoffwidth[0],takeoffheight[0]),(takeoffwidth[1],takeoffheight[1]),(255,255,255),2)
 >>>>>>> master
+=======
+>>>>>>> Stashed changes
             counttf.append(irises)
             waittime = 3 - int(len(counttf)/6)
             if waittime > 0:
@@ -157,10 +171,13 @@ class character: ##Fan Added
 
         elif inlanding:
             counttf[:] = []
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 =======
             cv2.rectangle(frame,(landingwidth[0],landingheight[0]),(landingwidth[1],landingheight[1]),(255,255,255),2)
 >>>>>>> master
+=======
+>>>>>>> Stashed changes
             countld.append(irises)
             waittime = 3 - int(len(countld)/6)
             if waittime > 0:
@@ -182,10 +199,13 @@ class character: ##Fan Added
 <<<<<<< HEAD
 =======
 
+<<<<<<< Updated upstream
 
 >>>>>>> master
 
 
+=======
+>>>>>>> Stashed changes
 class EyerisDetector:
     """
     Main class which use image source, classifier and tracker to estimate iris postion
@@ -208,14 +228,22 @@ class EyerisDetector:
         font = cv2.FONT_HERSHEY_SIMPLEX
         counttf = []
         countld = []
+<<<<<<< Updated upstream
 <<<<<<< HEAD
         #Calibration Array
         calibrate_array_middle_0 = []
+=======
+        # Prepare Calibration
+        cali_start = 0
+        # Initiazlie Calibration array. O for left eye, 1 for right eye
+        calibrate_array_middle_0 = [] 
+>>>>>>> Stashed changes
         calibrate_array_middle_1 = []
         calibrate_array_left_0 = []
         calibrate_array_left_1 = []
         calibrate_array_right_0 = []
         calibrate_array_right_1 = []
+<<<<<<< Updated upstream
         cali_start = 1
         # Store result for left and right eye. Index 0 for eye 0, index 1 for eye 1
         cali_centre = []
@@ -223,11 +251,18 @@ class EyerisDetector:
         cali_right = []
 =======
 >>>>>>> master
+=======
+        # Calibration result
+        middle_avg = [] #2 elements in array. Index 0 for eye_0, index 1 for eye_1
+        left_avg = [] #same as above
+        right_avg = [] #same as above
+>>>>>>> Stashed changes
         while k != 32:  # space
             frame = self.image_source.get_current_frame()
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             width = self.image_source.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
             height = self.image_source.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+<<<<<<< Updated upstream
             #Calibration Image
             if cali_start == 1:
                 if len(calibrate_array_middle_0) < 30:
@@ -252,6 +287,32 @@ class EyerisDetector:
                     cali_start = 0
 
 
+=======
+            
+            #Calibration Image
+            if cali_start == 0:
+                if len(calibrate_array_middle_0) < 30:
+                    cv2.circle(frame,(int(width/2),int(height/2)), 50, (153,255,255), -1) # Middle circle
+                    cv2.putText(frame, 'Please look at yellow circle', (int(width/2-120),int(height/2-50)), font, 0.7, (255, 0, 0), 2, cv2.LINE_AA)
+                    middle_on = 1
+                elif len(calibrate_array_middle_0) == 30 and len(calibrate_array_left_0)<30:
+                    cv2.circle(frame,(50,int(height/2)), 50, (153,255,0), -1) # left circle
+                    cv2.putText(frame, 'Please look at green circle', (0,int(height/2-50)), font, 0.7, (255, 0, 0), 2, cv2.LINE_AA)
+                    left_on = 1
+                elif len(calibrate_array_middle_0) == 30 and len(calibrate_array_left_0)==30 and len(calibrate_array_right_0)<30:
+                    cv2.circle(frame,(int(width-50),int(height/2)), 50, (255,153,255), -1) # right circle
+                    cv2.putText(frame, 'Please look at pink circle', (int(width-300),int(height/2-50)), font, 0.7, (255, 0, 0), 2, cv2.LINE_AA)
+                    right_on = 1
+                elif len(calibrate_array_middle_0) == 30 and len(calibrate_array_left_0)==30 and len(calibrate_array_right_0)==30:
+                    # Get calibration result (avg)
+                    middle_avg.append(character().calibrate(calibrate_array_middle_0))
+                    middle_avg.append(character().calibrate(calibrate_array_middle_1))
+                    left_avg.append(character().calibrate(calibrate_array_left_0))
+                    left_avg.append(character().calibrate(calibrate_array_left_1))
+                    right_avg.append(character().calibrate(calibrate_array_right_0))
+                    right_avg.append(character().calibrate(calibrate_array_right_1))
+                    cali_start = 1
+>>>>>>> Stashed changes
 
             if len(self.irises) >= 2:  # irises detected, track eyes
                 track_result = self.tracker.track(old_gray, gray, self.irises, self.blinks, self.blink_in_previous)
@@ -261,14 +322,20 @@ class EyerisDetector:
                 nose_rects = nose_cascade.detectMultiScale(gray, 1.3, 5)
                 for (x,y,w,h) in nose_rects:
                     f.write("{}\t{}\t{}\t{}\t{}\t{}t\r\n".format(self.irises[0][0],self.irises[0][1],self.irises[1][0],self.irises[1][0],int(x+w/2),int(y+h/2))) ### TEST CODE ###
+<<<<<<< Updated upstream
 <<<<<<< HEAD
                 
+=======
+                
+                # Calibration Array
+>>>>>>> Stashed changes
                 if middle_on == 1:
                     calibrate_array_middle_0.append([self.irises[0][0],self.irises[0][1]]) # left eye
                     calibrate_array_middle_1.append([self.irises[1][0],self.irises[1][1]]) # right eye
                     middle_on = 0
                 elif left_on == 1:
                     calibrate_array_left_0.append([self.irises[0][0],self.irises[0][1]])# left eye
+<<<<<<< Updated upstream
                     calibrate_array_left_1.append([self.irises[1][0],self.irises[1][1]])# right eye
                     left_on = 0
                 elif right_on == 1:
@@ -292,6 +359,19 @@ class EyerisDetector:
                 
 >>>>>>> master
                       
+=======
+                    calibrate_array_left_1.append([self.irises[1][0],self.irises[1][1]]) # right eye
+                    left_on = 0
+                elif right_on == 1:
+                    calibrate_array_right_0.append([self.irises[0][0],self.irises[0][1]]) # left eye
+                    calibrate_array_right_1.append([self.irises[1][0],self.irises[1][1]]) # right eye
+                    right_on = 0
+                 
+                # Take off and Landing
+                status = character().statetracker(font, self.image_source, frame, self.irises, counttf, countld) # for status,0 is waiting, -1 is landing, 1 is takingoff, 4 is unexpected error
+                
+                     
+>>>>>>> Stashed changes
                 if lost_track:
                     self.irises = self.classifier.get_irises_location(gray)
             else:  # cannot track for some reason -> find irises
