@@ -1,5 +1,9 @@
 import cv2
 import numpy
+import pyautogui
+import time
+
+# import subprocess
 from os.path import join
 data_analysis = open('np.csv', 'a')
 g = open("track.txt","w+")
@@ -144,7 +148,6 @@ class character: ##Fan Added
         if not(intakeoff or inlanding):
             counttf[:] = []
             countld[:] = []
-            g.write("waiting\r\n")
             self.state = 0
 
         elif intakeoff:
@@ -153,31 +156,25 @@ class character: ##Fan Added
             waittime = 3 - int(len(counttf)/6)
             if waittime > 0:
                 cv2.putText(frame, 'takeoff in: ' + str(waittime) + 'sec', (takeoffwidth[0],int(takeoffheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
-                g.write("waiting\r\n")
                 self.state = 0
             elif waittime <= 0:
-                g.write("takingoff\r\n")
                 cv2.putText(frame, 'taking off,please wait', (takeoffwidth[0],int(takeoffheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
-                self.state = 1
+                self.state = 6
 
         elif inlanding:
             counttf[:] = []
             countld.append(irises)
             waittime = 3 - int(len(countld)/6)
             if waittime > 0:
-                g.write("waiting\r\n")
                 cv2.putText(frame, 'landing in: ' + str(waittime) + 'sec', (landingwidth[0],int(landingheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
                 self.state = 0
             elif waittime <= 0:
-                g.write("landing\r\n")
                 cv2.putText(frame, 'landing,please wait', (landingwidth[0],int(landingheight[1]/2)), font, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
-                self.state = -1
+                self.state = 8
 
         else:
             self.state = 4
-            g.write("unexpected error\r\n")
                         
-
         return self.state
 
 
@@ -205,6 +202,8 @@ class EyerisDetector:
         font = cv2.FONT_HERSHEY_SIMPLEX
         counttf = []
         countld = []
+        switch_diff = []
+        switch_state = 0
         #Calibration Array
         calibrate_array_middle_0 = []
         calibrate_array_middle_1 = []
@@ -231,26 +230,26 @@ class EyerisDetector:
             height = self.image_source.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
             #Calibration Image
             if cali_start == -1:
-                if len(timer) < 30:
+                if len(timer) < 2:
                         cv2.putText(frame, 'Get ready for Calibration', (int(width/2)-200,int(height/2)-100), font, 0.8, (0, 177, 255), 2, cv2.LINE_AA)
                 else:
                     cali_start = 1
                     timer = [] 
 
             if cali_start == 1:
-                if len(calibrate_array_middle_0) < 50:
+                if len(calibrate_array_middle_0) < 5:
                     cv2.circle(frame,(int(width/2),int(height/2)), 50, (153,255,255), -1) # Middle circle
                     cv2.putText(frame, 'Please look at yellow circle', (int(width/2)-150,int(height/2)-50), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
                     middle_on = 1
-                elif len(calibrate_array_middle_0) == 50 and len(calibrate_array_left_0)<50:
+                elif len(calibrate_array_middle_0) == 5 and len(calibrate_array_left_0)<5:
                     cv2.circle(frame,(50,int(height/2)), 50, (153,255,0), -1) # left circle
                     cv2.putText(frame, 'Please look at green circle', (0,int(height/2)-50), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
                     left_on = 1
-                elif len(calibrate_array_middle_0) == 50 and len(calibrate_array_left_0) == 50 and len(calibrate_array_right_0) < 50:
+                elif len(calibrate_array_middle_0) == 5 and len(calibrate_array_left_0) == 5 and len(calibrate_array_right_0) < 5:
                     cv2.circle(frame,(int(width-50),int(height/2)), 50, (255,153,255), -1) # left circle
                     cv2.putText(frame, 'Please look at pink circle', (int(width-350),int(height/2)-50), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
                     right_on = 1
-                elif len(calibrate_array_middle_0) == 50 and len(calibrate_array_left_0) == 50 and len(calibrate_array_right_0) == 50:
+                elif len(calibrate_array_middle_0) == 5 and len(calibrate_array_left_0) == 5 and len(calibrate_array_right_0) == 5:
                     cali_centre.append(character().calibrate(calibrate_array_middle_0))
                     cali_centre.append(character().calibrate(calibrate_array_middle_1))
                     cali_left.append(character().calibrate(calibrate_array_left_0))
@@ -258,12 +257,12 @@ class EyerisDetector:
                     cali_right.append(character().calibrate(calibrate_array_right_0))
                     cali_right.append(character().calibrate(calibrate_array_right_1))
                     cali_start = 0
-            elif cali_start == 0:
+            if cali_start == 0:
                 if instruction_on == 1:
                     cv2.putText(frame, 'Taking off the Drone Now', (int(width/2)-200,int(height/2)-100), font, 0.8, (0, 163, 24), 2, cv2.LINE_AA)
                     # instruction_on = 1
                 if instruction_on == 2:
-                    if len(timer) < 30:
+                    if len(timer) < 3:
                         cv2.putText(frame, 'Get ready to control the Drone', (int(width/2)-200,int(height/2)-100), font, 0.8, (255, 0, 255), 2, cv2.LINE_AA)
                     else:
                         instruction_on = 3 
@@ -306,18 +305,39 @@ class EyerisDetector:
                     # Take off and Landing
                     status = character().statetracker(font, self.image_source, frame, self.irises, counttf, countld) # for status,0 is waiting, -1 is landing, 1 is takingoff, 4 is unexpected error
                     if instruction_on == 1 or instruction_on == 3 or instruction_on == 4: # Take off instruction   
-                        # Global variable for drone communication
-                        global switch_state  # 0b0011 for waiting, 0b0111 for takeoff, 0b1111 for landing
-                        if status == 0:
-                            switch_state = 0b0011
-                        elif status == 1:
-                            switch_state = 0b0111
+                        # switch_state # 0 for waiting, 5 for takeoff, 15 for landing
+                        if status == 6:
                             drone_start = 0
                             instruction_on = 2
-                        elif status == -1:
-                            switch_state = 0b1111
+                            pyautogui.hotkey('right')
+                            time.sleep(1)
+                            pyautogui.typewrite("takeoff()")
+                            time.sleep(1)
+                            pyautogui.typewrite(['enter'])
+                            time.sleep(1)
+                            pyautogui.hotkey('left')
+                        elif status == 8:
                             drone_start = 1
                             instruction_on = 4
+                            pyautogui.hotkey('right')
+                            time.sleep(1)
+                            pyautogui.typewrite("land()")
+                            time.sleep(1)
+                            pyautogui.typewrite(['enter'])
+                            time.sleep(1)
+                            pyautogui.hotkey('left')
+                        
+                        if len(switch_diff) <2:
+                            switch_diff.append(status)
+                        elif len(switch_diff) == 2:
+                            switch_diff.append(status)
+                            temp = switch_diff[1] - switch_diff[0]
+                            if abs(temp) == 6:
+                                switch_state = 5
+                            elif abs(temp) == 8:
+                                switch_state = 15
+                        g.write("{}\r\n".format(switch_state))
+                            
 
                         if instruction_on == 3: # Left/Right command
                             global drone_pos
@@ -340,6 +360,11 @@ class EyerisDetector:
                                 detector_1.remove(detector_1[0])
                                 drone_pos = flight_pos
                                 f.write("{}\r\n".format(flight_pos))
+                                if flight_pos == -1:
+                                    # fly left
+                                elif fligh_pos == 1:
+                                    # fly right
+                            
                     
                     elif instruction_on == 2: #Back to position intruction
                         timer.append([self.irises[0][0],self.irises[0][1]]) #for timing purpose only
