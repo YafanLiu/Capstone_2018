@@ -1,5 +1,8 @@
 import cv2
 import numpy
+import pyautogui
+import time
+
 from os.path import join
 data_analysis = open('np.csv', 'a')
 g = open("track.txt","w+")
@@ -120,19 +123,53 @@ class character: ##Fan Added
         average = sum(output)/float(len(output))
         return average
     def drone_state(self,pos,command):
-        if pos == -1:
-            if command == -1 or command == 0:
-                flight = -1
-            elif command == 1:
+        if pos == -0.5:
+            if command == -0.5 or command == 0:
+                flight = -0.5
+            elif command == 0.5:
                 flight = 0
         elif pos == 0:
-            flight = pos + command
-        elif pos == 1:
-            if command == 1 or command == 0:
-                flight = 1
-            elif command == -1:
+            if command == -0.5:
+                flight = -0.5
+            elif command == 0:
+                flight = 0
+            elif command == 0.5:
+                flight = 0.5
+        elif pos == 0.5:
+            if command == 0.5 or command == 0:
+                flight = 0.5
+            elif command == -0.5:
                 flight = 0 
         return flight
+    def control_drone(pos):
+        if pos == -0.5:
+            pyautogui.hotkey('right')
+            time.sleep(1)
+            pyautogui.typewrite("ctrl.go({x:0, y:-0.5})")
+            time.sleep(1)
+            pyautogui.typewrite(['enter'])
+            time.sleep(1)
+            pyautogui.hotkey('left')
+            print("here left")
+        elif pos == 0:
+            pyautogui.hotkey('right')
+            time.sleep(1)
+            pyautogui.typewrite("ctrl.go({x:0, y:0})")
+            time.sleep(1)
+            pyautogui.typewrite(['enter'])
+            time.sleep(1)
+            pyautogui.hotkey('left')
+            print("here right")
+        elif pos == 0.5:
+            pyautogui.hotkey('right')
+            time.sleep(1)
+            pyautogui.typewrite("ctrl.go({x:0, y:0.5})")
+            time.sleep(1)
+            pyautogui.typewrite(['enter'])
+            time.sleep(1)
+            pyautogui.hotkey('left')
+            print("here middle")
+
 
     def statetracker(self, font, imagesource, frame, irises, counttf, countld):
         width = imagesource.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -227,16 +264,19 @@ class EyerisDetector:
         cali_left = []
         cali_right = []
         nose_centre = 0
-        nose_left = 0
-        nose_right = 0
+        # nose_left = 0
+        # nose_right = 0
         # Left/right detection
         detector_0 = []
         detector_1 = []
-        detector_nose = []
+        # detector_nose = []
         drone_start = 1
         flight_pos = 0
         instruction_on = 1
         timer = []
+        #  drone_pos = 0
+        temp_state = []
+        temp_flight = []
         while k != 32:  # space
             frame = self.image_source.get_current_frame()
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -245,37 +285,37 @@ class EyerisDetector:
             
             #Calibration Image
             if cali_start == -1:
-                if len(timer) < 30:
+                if len(timer) < 10:
                     cv2.putText(frame, 'Get ready for Calibration', (int(width/2)-200,int(height/2)-100), font, 0.8, (0, 177, 255), 2, cv2.LINE_AA)
                 else:
                     cali_start = 1
                     timer = [] 
 
             if cali_start == 1:
-                if len(calibrate_array_middle_0) < 50:
+                if len(calibrate_array_middle_0) < 20:
                     cv2.circle(frame,(int(width/2),int(height/2)), 50, (153,255,255), -1) # Middle circle
                     cv2.putText(frame, 'Please look at yellow circle', (int(width/2)-150,int(height/2)-50), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
                     middle_on = 1
-                elif len(calibrate_array_middle_0) == 50 and len(calibrate_array_left_0)<50:
+                elif len(calibrate_array_middle_0) == 20 and len(calibrate_array_left_0)<20:
                     cv2.circle(frame,(50,int(height/2)), 50, (153,255,0), -1) # left circle
                     cv2.putText(frame, 'Please look at green circle', (0,int(height/2)-50), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
                     left_on = 1
-                elif len(calibrate_array_middle_0) == 50 and len(calibrate_array_left_0) == 50 and len(calibrate_array_right_0) < 50:
+                elif len(calibrate_array_middle_0) == 20 and len(calibrate_array_left_0) == 20 and len(calibrate_array_right_0) < 20:
                     cv2.circle(frame,(int(width-50),int(height/2)), 50, (255,153,255), -1) # left circle
                     cv2.putText(frame, 'Please look at pink circle', (int(width-350),int(height/2)-50), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
                     right_on = 1
-                elif len(calibrate_array_middle_0) == 50 and len(calibrate_array_left_0) == 50 and len(calibrate_array_right_0) == 50:
+                elif len(calibrate_array_middle_0) == 20 and len(calibrate_array_left_0) == 20 and len(calibrate_array_right_0) == 20:
                     cali_centre.append(character().calibrate(calibrate_array_middle_0))
                     cali_centre.append(character().calibrate(calibrate_array_middle_1))
                     cali_left.append(character().calibrate(calibrate_array_left_0))
                     cali_left.append(character().calibrate(calibrate_array_left_1))
                     cali_right.append(character().calibrate(calibrate_array_right_0))
                     cali_right.append(character().calibrate(calibrate_array_right_1))
-                    nose_centre = character().calibrate(calibrate_array_middle_nose)
-                    nose_left = character().calibrate(calibrate_array_left_nose)
-                    nose_right = character().calibrate(calibrate_array_right_nose)
+                    # nose_centre = character().calibrate(calibrate_array_middle_nose)
+                    # nose_left = character().calibrate(calibrate_array_left_nose)
+                    # nose_right = character().calibrate(calibrate_array_right_nose)
                     # Unsuccess Calibration
-                    if (cali_left[0] >  cali_centre[0] or cali_left[1] > cali_centre[1]) or (cali_centre[0] > cali_right[0] or cali_centre[1] > cali_right[1]) or (cali_left[0] > cali_right[0] or cali_left[1] > cali_right[1]) or (nose_left > nose_right):
+                    if (cali_left[0] >  cali_centre[0] or cali_left[1] > cali_centre[1]) or (cali_centre[0] > cali_right[0] or cali_centre[1] > cali_right[1]) or (cali_left[0] > cali_right[0] or cali_left[1] > cali_right[1]):
                         recali = 1
                         if len(timer) < 10:
                             cv2.putText(frame, 'Unsuccessful Calibration, Please follow the instruction and re-calibrate', (int(width/2)-450,int(height/2)-100), font, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
@@ -300,7 +340,7 @@ class EyerisDetector:
                     cv2.putText(frame, 'Taking off the Drone Now', (int(width/2)-200,int(height/2)-100), font, 0.8, (0, 163, 24), 2, cv2.LINE_AA)
                     # instruction_on = 1
                 if instruction_on == 2:
-                    if len(timer) < 30:
+                    if len(timer) < 10:
                         cv2.putText(frame, 'Get ready to control the Drone', (int(width/2)-200,int(height/2)-100), font, 0.8, (255, 0, 255), 2, cv2.LINE_AA)
                     else:
                         instruction_on = 3 
@@ -325,15 +365,15 @@ class EyerisDetector:
                 track_result = self.tracker.track(old_gray, gray, self.irises, self.blinks, self.blink_in_previous)
                 self.irises, self.blinks, self.blink_in_previous, lost_track = track_result
                 # Nose detector
-                nose_cascade = cv2.CascadeClassifier('haarcascade_mcs_nose.xml')
-                nose_rects = nose_cascade.detectMultiScale(gray, 1.3, 5)
-                f.write("{}\t\r\n".format(nose_rects)) ### TEST CODE ###
-                for (x,y,w,h) in nose_rects:
-                    nose_x = int(x+w/2)
-                    nose_y = int(y+h/2)
-                    nose_px.append(nose_x)
-                    nose_py.append(nose_y)
-                    # f.write("{}\t\r\n".format(nose_rects)) ### TEST CODE ###
+                # nose_cascade = cv2.CascadeClassifier('haarcascade_mcs_nose.xml')
+                # nose_rects = nose_cascade.detectMultiScale(gray, 1.3, 5)
+                # f.write("{}\t\r\n".format(nose_rects)) ### TEST CODE ###
+                # for (x,y,w,h) in nose_rects:
+                #     nose_x = int(x+w/2)
+                #     nose_y = int(y+h/2)
+                #     nose_px.append(nose_x)
+                #     nose_py.append(nose_y)
+                #     # f.write("{}\t\r\n".format(nose_rects)) ### TEST CODE ###
                 
                 if cali_start == -1 or recali == 1:
                     timer.append([self.irises[0][0],self.irises[0][1]]) #for timing purpose only
@@ -342,17 +382,17 @@ class EyerisDetector:
                     if middle_on == 1:
                         calibrate_array_middle_0.append([self.irises[0][0],self.irises[0][1]]) # left eye
                         calibrate_array_middle_1.append([self.irises[1][0],self.irises[1][1]]) # right eye
-                        calibrate_array_middle_nose.append([nose_px[-1],nose_py[-1]]) #nose
+                        # calibrate_array_middle_nose.append([nose_px[-1],nose_py[-1]]) #nose
                         middle_on = 0
                     elif left_on == 1:
                         calibrate_array_left_0.append([self.irises[0][0],self.irises[0][1]])# left eye
                         calibrate_array_left_1.append([self.irises[1][0],self.irises[1][1]])# right eye
-                        calibrate_array_left_nose.append([nose_px[-1],nose_py[-1]]) #nose
+                        # calibrate_array_left_nose.append([nose_px[-1],nose_py[-1]]) #nose
                         left_on = 0
                     elif right_on == 1:
                         calibrate_array_right_0.append([self.irises[0][0],self.irises[0][1]])# left eye
                         calibrate_array_right_1.append([self.irises[1][0],self.irises[1][1]])# right eye
-                        calibrate_array_right_nose.append([nose_px[-1],nose_py[-1]]) #nose
+                        # calibrate_array_right_nose.append([nose_px[-1],nose_py[-1]]) #nose
                         right_on = 0
  
                 #Generate left/right detection
@@ -369,37 +409,76 @@ class EyerisDetector:
                             switch_state = 0b0111
                             drone_start = 0
                             instruction_on = 2
+                            pyautogui.hotkey('right')
+                            time.sleep(1)
+                            pyautogui.typewrite("takeoff()")
+                            time.sleep(1)
+                            pyautogui.typewrite(['enter'])
+                            time.sleep(1)
+                            pyautogui.hotkey('left')
                         elif status == -1:
                             switch_state = 0b1111
                             drone_start = 1
                             instruction_on = 4
+                            pyautogui.hotkey('right')
+                            time.sleep(1)
+                            pyautogui.typewrite("land()")
+                            time.sleep(1)
+                            pyautogui.typewrite(['enter'])
+                            time.sleep(1)
+                            pyautogui.hotkey('left')
 
                         if instruction_on == 3: # Left/Right command
-                            global drone_pos
+
                             if len(detector_0) < 10:
                                 detector_0.append([self.irises[0][0],self.irises[0][1]]) # left eye
                                 detector_1.append([self.irises[1][0],self.irises[1][1]]) # right eye
-                                detector_nose.append([nose_px[-1],nose_py[-1]]) # nose
+                                # detector_nose.append([nose_px[-1],nose_py[-1]]) # nose
                             if len(detector_0) == 10:
                                 current_0 = character().calibrate(detector_0) # left eye current location
                                 current_1 = character().calibrate(detector_1) # right eye current location
-                                current_nose = character().calibrate(detector_nose) # nose current location
-                                if (current_0 <= cali_left[0] and current_1 <= cali_left[1]) and current_nose < nose_left: #see left
-                                    det = -1
-                                    flight_pos = character().drone_state(flight_pos,det)
-                                    signal = -1
-                                elif (current_0 >= cali_right[0] and current_1 >= cali_right[1]) and current_nose > nose_right: #see right
-                                    det = 1
-                                    flight_pos = character().drone_state(flight_pos,det)
-                                    signal = 1
-                                elif (current_0 > cali_left[0] and current_0 < cali_right[0]) and (current_1 > cali_left[1] and current_1 < cali_right[1]): # in middle range
-                                    det = 0
-                                    flight_pos = character().drone_state(flight_pos,det)
+                                # current_nose = character().calibrate(detector_nose) # nose current location
+                                if current_0 <= cali_left[0] and current_1 <= cali_left[1]: #see left
+                                    # det = -1
+                                    signal = -0.5
+                                    # flight_pos = character().drone_state(flight_pos,signal)
+                                    temp_state.append(signal)
+                                elif current_0 >= cali_right[0] and current_1 >= cali_right[1]: #see right
+                                    # det = 1
+                                    signal = 0.5
+                                    # flight_pos = character().drone_state(flight_pos,signal)
+                                    temp_state.append(signal)
+                                # elif (current_0 > cali_left[0] and current_0 < cali_right[0]) and (current_1 > cali_left[1] and current_1 < cali_right[1]): # in middle range
+                                else:
+                                    # det = 0
                                     signal = 0
+                                    # flight_pos = character().drone_state(flight_pos,signal)
+                                    temp_state.append(signal)
                                 detector_0.remove(detector_0[0])
                                 detector_1.remove(detector_1[0])
-                                drone_pos = flight_pos
-                                f.write("{}\r\n".format(flight_pos))
+
+                                if len(temp_state) >= 30:
+
+                                    if temp_state[0] != temp_state[-1]:
+                                        a = temp_state[-1]
+                                        temp_state = []
+                                        temp_state.append(a)
+                                        flight_pos = character().drone_state(flight_pos,temp_state[-1])
+                                        if len(temp_flight) < 1:
+                                            temp_flight.append(flight_pos)
+                                            character.control_drone(flight_pos)
+                                        
+                                        elif flight_pos != temp_flight[-1]:
+                                            temp_flight.append(flight_pos)
+                                            character.control_drone(flight_pos)
+
+                                        print(temp_state[-1])
+                                        print (flight_pos)
+
+                                
+                                # f.write("{}\r\n".format(temp_state))
+                                # print(flight_pos)
+
                     
                     elif instruction_on == 2: #Back to position intruction
                         timer.append([self.irises[0][0],self.irises[0][1]]) #for timing purpose only
@@ -413,7 +492,7 @@ class EyerisDetector:
             show_image_with_data(frame, self.blinks, self.landblinks, self.irises, self.image_source.capture)
             k = cv2.waitKey(30) & 0xff
             old_gray = gray.copy()
-
+        f.write("{}\r\n".format(temp_state))
         self.image_source.release()
         cv2.destroyAllWindows()
 
